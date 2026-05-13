@@ -1,8 +1,14 @@
+
+// src/app/(organizer)/tournaments/page.tsx
+import { requireRole } from "@/lib/auth";
+
 import prisma  from "../../../lib/prisma";
 
 export default async function TournamentsPage() {
+  await requireRole("ORGANIZER");
   // TEMPORAIRE
   const organizerId = "TEMP_USER_ID";
+  
 
   const tournaments =
     await prisma.tournament.findMany({
