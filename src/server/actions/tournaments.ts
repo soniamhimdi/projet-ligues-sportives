@@ -1,6 +1,7 @@
 "use server";
 
-import  prisma  from "../../lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+import prisma from "../../lib/prisma";
 
 import {
   createTournamentSchema,
@@ -8,76 +9,54 @@ import {
   TournamentInput,
 } from "../../lib/validations/tournament";
 
-
 // =========================
 // CREATE TOURNAMENT
 // =========================
 
-export async function createTournament(
-  data: TournamentInput
-) {
+export async function createTournament(data: TournamentInput) {
   try {
-    const validatedData =
-      createTournamentSchema.parse(data);
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return { success: false, error: "Non authentifié" };
 
-    // TEMPORAIRE
-    // remplacé plus tard par Clerk auth()
-    const organizerId = "TEMP_USER_ID";
+    const user = await prisma.user.findUnique({ where: { clerkId } });
+    if (!user) return { success: false, error: "Utilisateur introuvable" };
 
-    const tournament =
-      await prisma.tournament.create({
-        data: {
-          ...validatedData,
+    const validatedData = createTournamentSchema.parse(data);
 
-          startDate: new Date(
-            validatedData.startDate
-          ),
+    const tournament = await prisma.tournament.create({
+      data: {
+        ...validatedData,
+        startDate: new Date(validatedData.startDate),
+        organizerId: user.id,
+      },
+    });
 
-          organizerId,
-        },
-      });
-
-    return {
-      success: true,
-      tournament,
-    };
+    return { success: true, tournament };
   } catch (error) {
     console.log(error);
-
-    return {
-      success: false,
-      error: "Erreur création tournoi",
-    };
+    return { success: false, error: "Erreur création tournoi" };
   }
 }
-
 
 // =========================
 // UPDATE TOURNAMENT
 // =========================
 
-export async function updateTournament(
-  id: string,
-  data: TournamentInput
-) {
+export async function updateTournament(id: string, data: TournamentInput) {
   try {
-    const validatedData =
-      updateTournamentSchema.parse(data);
+    const validatedData = updateTournamentSchema.parse(data);
 
-    const tournament =
-      await prisma.tournament.update({
-        where: {
-          id,
-        },
+    const tournament = await prisma.tournament.update({
+      where: {
+        id,
+      },
 
-        data: {
-          ...validatedData,
+      data: {
+        ...validatedData,
 
-          startDate: new Date(
-            validatedData.startDate
-          ),
-        },
-      });
+        startDate: new Date(validatedData.startDate),
+      },
+    });
 
     return {
       success: true,
@@ -93,14 +72,11 @@ export async function updateTournament(
   }
 }
 
-
 // =========================
 // DELETE TOURNAMENT
 // =========================
 
-export async function deleteTournament(
-  id: string
-) {
+export async function deleteTournament(id: string) {
   try {
     await prisma.tournament.delete({
       where: {

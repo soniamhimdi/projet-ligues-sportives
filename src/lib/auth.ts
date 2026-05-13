@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import prisma  from "@/lib/prisma";
-import type {Role}   from "@prisma/client";
+import prisma from "@/lib/prisma";
+import type { Role } from "@/generated/prisma/enums";
 
 export async function getCurrentUser() {
   const { userId } = await auth();
@@ -20,10 +20,11 @@ export async function getCurrentUser() {
 
     user = await prisma.user.create({
       data: {
-        clerkId:  clerkUser.id,
-        email:    clerkUser.emailAddresses[0].emailAddress,
-        fullName: `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim(),
-        role:     "PLAYER",
+        clerkId: clerkUser.id,
+        email: clerkUser.emailAddresses[0].emailAddress,
+        fullName:
+          `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim(),
+        role: "PLAYER",
       },
       include: { playerProfile: true },
     });
