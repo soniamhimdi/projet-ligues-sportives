@@ -3,7 +3,8 @@
 import  prisma  from "../../lib/prisma";
 
 import {
-  tournamentSchema,
+  createTournamentSchema,
+  updateTournamentSchema,
   TournamentInput,
 } from "../../lib/validations/tournament";
 
@@ -17,7 +18,7 @@ export async function createTournament(
 ) {
   try {
     const validatedData =
-      tournamentSchema.parse(data);
+      createTournamentSchema.parse(data);
 
     // TEMPORAIRE
     // remplacé plus tard par Clerk auth()
@@ -61,7 +62,7 @@ export async function updateTournament(
 ) {
   try {
     const validatedData =
-      tournamentSchema.parse(data);
+      updateTournamentSchema.parse(data);
 
     const tournament =
       await prisma.tournament.update({

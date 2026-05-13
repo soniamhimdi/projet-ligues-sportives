@@ -1,19 +1,45 @@
 
-// src/app/(organizer)/tournaments/page.tsx
+import { auth } from "@clerk/nextjs/server";
+
 import { requireRole } from "@/lib/auth";
 
-import prisma  from "../../../lib/prisma";
+import prisma from "@/lib/prisma";
 
 export default async function TournamentsPage() {
   await requireRole("ORGANIZER");
-  // TEMPORAIRE
-  const organizerId = "TEMP_USER_ID";
-  
+
+  // Clerk user
+  const { userId } =
+    await auth();
+
+  if (!userId) {
+    return (
+      <div className="p-6">
+        Non autorisé
+      </div>
+    );
+  }
+
+  // User Prisma
+  const user =
+    await prisma.user.findUnique({
+      where: {
+        clerkId: userId,
+      },
+    });
+
+  if (!user) {
+    return (
+      <div className="p-6">
+        Utilisateur introuvable
+      </div>
+    );
+  }
 
   const tournaments =
     await prisma.tournament.findMany({
       where: {
-        organizerId,
+        organizerId: user.id,
       },
 
       orderBy: {
@@ -44,37 +70,47 @@ export default async function TournamentsPage() {
       </div>
 
       <div className="grid gap-4">
-        {tournaments.map((tournament) => (
-          <div
-            key={tournament.id}
-            className="border rounded-xl p-4"
-          >
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">
-                {tournament.name}
-              </h2>
+        {tournaments.map(
+          (tournament) => (
+            <div
+              key={tournament.id}
+              className="border rounded-xl p-4"
+            >
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">
+                  {tournament.name}
+                </h2>
 
-              <p>
-                Sport : {tournament.sport}
-              </p>
+                <p>
+                  Sport :{" "}
+                  {tournament.sport}
+                </p>
 
-              <p>
-                Ville : {tournament.city}
-              </p>
+                <p>
+                  Ville :{" "}
+                  {tournament.city}
+                </p>
 
-              <p>
-                Équipes :{" "}
-                {tournament._count.teams}
-              </p>
+                <p>
+                  Équipes :{" "}
+                  {
+                    tournament._count
+                      .teams
+                  }
+                </p>
 
-              <p>
-                Prix :{" "}
-                {tournament.entryFee / 100}{" "}
-                {tournament.currency}
-              </p>
+                <p>
+                  Prix :{" "}
+                  {tournament.entryFee /
+                    100}{" "}
+                  {
+                    tournament.currency
+                  }
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+
 import { ClerkProvider } from "@clerk/nextjs";
-import { Geist, Geist_Mono } from "next/font/google";
-//import Header from "@/components/Header";
+
+import {
+  Geist,
+  Geist_Mono,
+} from "next/font/google";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -9,16 +14,21 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistMono =
+  Geist_Mono({
+    variable:
+      "--font-geist-mono",
 
-export const metadata: Metadata = {
-  title: "Sports Platform",
-  description: "Plateforme de gestion de ligues sportives communautaires",
-};
+    subsets: ["latin"],
+  });
 
+export const metadata: Metadata =
+  {
+    title: "Sports Platform",
+
+    description:
+      "Plateforme de gestion de ligues sportives communautaires",
+  };
 
 export default function RootLayout({
   children,
@@ -26,15 +36,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ClerkProvider>
-          
+    <ClerkProvider>
+      <html lang="fr">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
           {children}
-        </ClerkProvider>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

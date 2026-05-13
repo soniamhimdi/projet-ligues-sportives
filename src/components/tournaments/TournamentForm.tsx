@@ -9,7 +9,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
-  tournamentSchema,
+    createTournamentSchema,
+  updateTournamentSchema,
   TournamentInput,
 } from "../../lib/validations/tournament";
 
@@ -36,7 +37,7 @@ export default function TournamentForm({
 
   const form = useForm<TournamentInput>({
     resolver: zodResolver(
-      tournamentSchema
+      isEdit ? updateTournamentSchema : createTournamentSchema
     ),
 
     defaultValues: {
