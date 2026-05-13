@@ -57,6 +57,14 @@ export async function createJoinRequest(
       };
     }
 
+    // seul un joueur ou admin peut faire une demande
+    if (user.role === "ORGANIZER") {
+      return {
+        success: false,
+        error: "Les organisateurs ne peuvent pas rejoindre une équipe",
+      };
+    }
+
     // vérifier équipe
     const team =
       await prisma.team.findUnique({

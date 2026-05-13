@@ -1,4 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import prisma from "../../../lib/prisma";
+import JoinTeamButton from "@/components/join-requests/JoinTeamButton";
 
 interface PageProps {
   searchParams: Promise<{
@@ -10,81 +12,71 @@ interface PageProps {
   }>;
 }
 
-export default async function TeamsPage({
-  searchParams,
-}: PageProps) {
-  const params =
-    await searchParams;
+export default async function TeamsPage({ searchParams }: PageProps) {
+  const { userId } = await auth();
 
-  const city =
-    params.city || "";
-
-  const sport =
-    params.sport || "";
-
-  const available =
-    params.available === "true";
-
-  const teams =
-    await prisma.team.findMany({
-      where: {
-        tournament: {
-          city: city
-            ? {
-                contains:
-                  city,
-                mode:
-                  "insensitive",
-              }
-            : undefined,
-
-          sport: sport
-            ? {
-                contains:
-                  sport,
-                mode:
-                  "insensitive",
-              }
-            : undefined,
-        },
-      },
-
-      include: {
-        tournament: true,
-
-        _count: {
-          select: {
-            members: true,
-          },
-        },
-      },
-
-      orderBy: {
-        createdAt: "desc",
-      },
+  // vérifier le rôle pour afficher ou non le bouton rejoindre
+  let canJoin = false;
+  if (userId) {
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
     });
+    canJoin = currentUser?.role === "PLAYER" || currentUser?.role === "ADMIN";
+  }
 
-  const filteredTeams =
-    available
-      ? teams.filter(
-          (team) =>
-            team._count
-              .members <
-            team.maxCapacity
-        )
-      : teams;
+  const params = await searchParams;
+
+  const city = params.city || "";
+
+  const sport = params.sport || "";
+
+  const available = params.available === "true";
+
+  const teams = await prisma.team.findMany({
+    where: {
+      tournament: {
+        city: city
+          ? {
+              contains: city,
+              mode: "insensitive",
+            }
+          : undefined,
+
+        sport: sport
+          ? {
+              contains: sport,
+              mode: "insensitive",
+            }
+          : undefined,
+      },
+    },
+
+    include: {
+      tournament: true,
+
+      _count: {
+        select: {
+          members: true,
+        },
+      },
+    },
+
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  const filteredTeams = available
+    ? teams.filter((team) => team._count.members < team.maxCapacity)
+    : teams;
 
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">
-          Équipes disponibles
-        </h1>
+        <h1 className="text-3xl font-bold">Équipes disponibles</h1>
 
-        <p className="text-muted-foreground">
-          Rechercher une équipe
-        </p>
+        <p className="text-muted-foreground">Rechercher une équipe</p>
       </div>
 
       {/* Filters */}
@@ -110,11 +102,8 @@ export default async function TeamsPage({
             type="checkbox"
             name="available"
             value="true"
-            defaultChecked={
-              available
-            }
+            defaultChecked={available}
           />
-
           Places disponibles
         </label>
 
@@ -125,57 +114,25 @@ export default async function TeamsPage({
 
       {/* Teams */}
       <div className="grid gap-4">
-        {filteredTeams.map(
-          (team) => (
-            <div
-              key={team.id}
-              className="border rounded-xl p-4 space-y-2"
-            >
-              <h2 className="text-xl font-semibold">
-                {team.name}
-              </h2>
+        {filteredTeams.map((team) => (
+          <div key={team.id} className="border rounded-xl p-4 space-y-2">
+            <h2 className="text-xl font-semibold">{team.name}</h2>
 
-              <p>
-                Sport :{" "}
-                {
-                  team
-                    .tournament
-                    .sport
-                }
-              </p>
+            <p>Sport : {team.tournament.sport}</p>
 
-              <p>
-                Ville :{" "}
-                {
-                  team
-                    .tournament
-                    .city
-                }
-              </p>
+            <p>Ville : {team.tournament.city}</p>
 
-              <p>
-                Places :{" "}
-                {
-                  team._count
-                    .members
-                }
-                /
-                {
-                  team.maxCapacity
-                }
-              </p>
+            <p>
+              Places : {team._count.members}/{team.maxCapacity}
+            </p>
 
-              <p>
-                Tournoi :{" "}
-                {
-                  team
-                    .tournament
-                    .name
-                }
-              </p>
-            </div>
-          )
-        )}
+            <p>Tournoi : {team.tournament.name}</p>
+
+            {team._count.members < team.maxCapacity && canJoin && (
+              <JoinTeamButton teamId={team.id} />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
