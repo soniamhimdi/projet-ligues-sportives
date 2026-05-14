@@ -1,4 +1,6 @@
 import prisma from "../../../../lib/prisma";
+import JoinTeamForm
+from "@/components/teams/JoinTeamForm";
 
 interface PageProps {
   params: Promise<{
@@ -86,7 +88,9 @@ export default async function TeamDetailsPage({
           / {team.maxCapacity}
         </p>
       </div>
-
+      <JoinTeamForm
+  teamId={team.id}
+/>
       {/* Members */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">

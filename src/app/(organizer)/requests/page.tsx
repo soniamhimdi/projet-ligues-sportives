@@ -6,28 +6,75 @@ export default async function OrganizerRequestsPage() {
   const user = await requireAuth();
 
   // get all pending requests for teams in tournaments owned by this organizer
-  const requests = await prisma.joinRequest.findMany({
+  const teams =
+  await prisma.team.findMany({
     where: {
-      status: "PENDING",
-      team: {
-        tournament: { organizerId: user.id },
+      tournament: {
+        organizerId: user.id,
       },
     },
+  });
+  const requests = await prisma.joinRequest.findMany({
+   where: {
+  status: "PENDING",
+
+  teamId:
+    teamId || undefined,
+
+  team: {
+    tournament: {
+      organizerId: user.id,
+    },
+  },
+},
     include: {
       team: { include: { tournament: true } },
-      player: true,
+      player: {
+  include: {
+    playerProfile: true,
+  },
+},
     },
     orderBy: { createdAt: "desc" },
   });
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Demandes reçues</h1>
-        <p className="text-muted-foreground">
-          Demandes en attente pour vos équipes
-        </p>
-      </div>
+  <div>
+    <h1 className="text-3xl font-bold">
+      Demandes reçues
+    </h1>
+
+    <p className="text-muted-foreground">
+      Demandes en attente pour vos équipes
+    </p>
+  </div>
+
+  {/* FILTER */}
+  <form>
+    <select
+      name="teamId"
+      defaultValue={teamId}
+      className="border rounded-lg p-2"
+    >
+      <option value="">
+        Toutes les équipes
+      </option>
+
+      {teams.map((team) => (
+        <option
+          key={team.id}
+          value={team.id}
+        >
+          {team.name}
+        </option>
+      ))}
+    </select>
+
+    <button className="ml-2 border px-4 py-2 rounded-lg">
+      Filtrer
+    </button>
+  </form>
 
       {requests.length === 0 ? (
         <p className="text-muted-foreground">Aucune demande en attente.</p>
@@ -44,20 +91,59 @@ export default async function OrganizerRequestsPage() {
                 </span>
               </div>
 
-              <p>Équipe : {req.team.name}</p>
-              <p>Tournoi : {req.team.tournament.name}</p>
+          <p>
+            Équipe :
+            {" "}
+            {req.team.name}
+          </p>
 
-              {req.message && (
-                <p className="text-sm text-muted-foreground italic">
-                  « {req.message} »
-                </p>
-              )}
+          <p>
+            Tournoi :
+            {" "}
+            {
+              req.team
+                .tournament.name
+            }
+          </p>
 
-              <AcceptRejectButtons requestId={req.id} />
-            </div>
-          ))}
+          <p>
+            Ville :
+            {" "}
+            {req.player
+              .playerProfile
+              ?.city || "N/A"}
+          </p>
+
+          <p>
+            Niveau :
+            {" "}
+            {req.player
+              .playerProfile
+              ?.level || "N/A"}
+          </p>
+
+          <p>
+            Sport :
+            {" "}
+            {req.player
+              .playerProfile
+              ?.favoriteSport ||
+              "N/A"}
+          </p>
+
+          {req.message && (
+            <p className="text-sm text-muted-foreground italic">
+              « {req.message} »
+            </p>
+          )}
+
+          <AcceptRejectButtons
+            requestId={req.id}
+          />
         </div>
-      )}
+      ))}
     </div>
+  )}
+</div>
   );
 }
