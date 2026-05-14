@@ -1,14 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import AcceptRejectButtons from "@/components/join-requests/AcceptRejectButtons";
 
 export default async function OrganizerRequestsPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
-
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } });
-  if (!user) redirect("/sign-in");
+  const user = await requireAuth();
 
   // get all pending requests for teams in tournaments owned by this organizer
   const requests = await prisma.joinRequest.findMany({
@@ -42,7 +37,7 @@ export default async function OrganizerRequestsPage() {
             <div key={req.id} className="border rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">
-                  {req.player.firstName ?? req.player.email}
+                  {req.player.fullName ?? req.player.email}
                 </h2>
                 <span className="text-sm text-muted-foreground">
                   {new Date(req.createdAt).toLocaleDateString("fr-CA")}

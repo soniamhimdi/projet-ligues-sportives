@@ -4,29 +4,32 @@ import {
   Show,
   SignInButton,
   SignUpButton,
-  SignOutButton,
   UserButton,
   useUser,
+  useClerk,
 } from "@clerk/nextjs";
 import Link from "next/link";
 
-export default function Header() {
+export default function Header({ role }: { role?: string | null }) {
   const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
   return (
     <header className="w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        
         {/* Logo / Nom du site */}
         <Link
           href="/"
           className="text-xl font-bold text-purple-700 dark:text-purple-400 hover:opacity-80 transition-opacity"
         >
-           Ligues Sportives Communautaires
+          Ligues Sportives Communautaires
         </Link>
 
         {/* Navigation centrale */}
-        <nav style={{ display: 'flex', gap: '24px' }} className="hidden md:flex items-center text-sm font-medium text-gray-600 dark:text-gray-300">
+        <nav
+          style={{ display: "flex", gap: "24px" }}
+          className="hidden md:flex items-center text-sm font-medium text-gray-600 dark:text-gray-300"
+        >
           <Link
             href="/"
             className="hover:text-purple-700 dark:hover:text-purple-400 transition-colors"
@@ -46,6 +49,14 @@ export default function Header() {
             >
               Tournois
             </Link>
+            {(role === "PLAYER" || role === "ADMIN") && (
+              <Link
+                href="/my-requests"
+                className="hover:text-purple-700 dark:hover:text-purple-400 transition-colors"
+              >
+                Mes demandes
+              </Link>
+            )}
           </Show>
         </nav>
 
@@ -77,6 +88,7 @@ export default function Header() {
 
             {/* Avatar + menu Clerk */}
             <UserButton
+              afterSignOutUrl="/"
               appearance={{
                 elements: {
                   avatarBox: "w-9 h-9",
@@ -84,11 +96,12 @@ export default function Header() {
               }}
             />
 
-            <SignOutButton>
-              <button className="hidden md:block text-sm font-medium text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1.5">
-                Déconnexion
-              </button>
-            </SignOutButton>
+            <button
+              onClick={() => signOut({ redirectUrl: "/" })}
+              className="text-sm font-medium text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1.5"
+            >
+              Déconnexion
+            </button>
           </Show>
         </div>
       </div>

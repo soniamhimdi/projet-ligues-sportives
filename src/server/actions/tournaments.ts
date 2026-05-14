@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import prisma from "../../lib/prisma";
 
 import {
@@ -15,19 +15,28 @@ import {
 
 export async function createTournament(data: TournamentInput) {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return { success: false, error: "Non authentifié" };
-
-    const user = await prisma.user.findUnique({ where: { clerkId } });
-    if (!user) return { success: false, error: "Utilisateur introuvable" };
+    const user = await getCurrentUser();
+    if (!user) return { success: false, error: "Non authentifié" };
 
     const validatedData = createTournamentSchema.parse(data);
 
+    const { teams, ...tournamentData } = validatedData;
+
     const tournament = await prisma.tournament.create({
       data: {
-        ...validatedData,
+        ...tournamentData,
         startDate: new Date(validatedData.startDate),
         organizerId: user.id,
+        ...(teams && teams.length > 0
+          ? {
+              teams: {
+                create: teams.map((t) => ({
+                  name: t.name,
+                  maxCapacity: t.maxCapacity,
+                })),
+              },
+            }
+          : {}),
       },
     });
 

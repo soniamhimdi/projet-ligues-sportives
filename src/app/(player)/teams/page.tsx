@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import prisma from "../../../lib/prisma";
 import JoinTeamButton from "@/components/join-requests/JoinTeamButton";
 
@@ -13,16 +13,9 @@ interface PageProps {
 }
 
 export default async function TeamsPage({ searchParams }: PageProps) {
-  const { userId } = await auth();
-
-  // vérifier le rôle pour afficher ou non le bouton rejoindre
-  let canJoin = false;
-  if (userId) {
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-    canJoin = currentUser?.role === "PLAYER" || currentUser?.role === "ADMIN";
-  }
+  const currentUser = await getCurrentUser();
+  const canJoin =
+    currentUser?.role === "PLAYER" || currentUser?.role === "ADMIN";
 
   const params = await searchParams;
 

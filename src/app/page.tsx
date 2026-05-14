@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
-import Header from "@/components/Header";
 
 export default async function HomePage() {
   const { userId } = await auth();
 
   return (
     <>
-      <Header />
       <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
-
         {/* Hero */}
         <section className="max-w-6xl mx-auto px-4 pt-24 pb-16 text-center">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-3 py-1 rounded-full mb-6">
@@ -17,7 +14,8 @@ export default async function HomePage() {
           </span>
 
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white leading-tight mb-4">
-            Trouve ton équipe.<br />
+            Trouve ton équipe.
+            <br />
             Crée ton tournoi.
           </h1>
 
@@ -135,7 +133,6 @@ export default async function HomePage() {
             </div>
           </section>
         )}
-
       </main>
     </>
   );

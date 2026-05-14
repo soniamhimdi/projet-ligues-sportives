@@ -1,42 +1,50 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import type { Role } from "@/generated/prisma/enums";
 
-export async function getCurrentUser() {
-  const { userId } = await auth();
-  if (!userId) return null;
+// Synchronise le user Clerk avec la base de données.
+// Crée le user en DB s'il n'existe pas encore.
+export async function syncUser() {
+  const clerkUser = await currentUser();
+  if (!clerkUser) return null;
 
-  // Cherche le user en base
-  let user = await prisma.user.findUnique({
-    where: { clerkId: userId },
+  const existingUser = await prisma.user.findUnique({
+    where: { clerkId: clerkUser.id },
     include: { playerProfile: true },
   });
 
-  // Pas encore en base → on le crée depuis Clerk
-  if (!user) {
-    const clerkUser = await currentUser();
-    if (!clerkUser) return null;
+  if (existingUser) return existingUser;
 
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUser.id,
-        email: clerkUser.emailAddresses[0].emailAddress,
-        fullName:
-          `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim(),
-        role: "PLAYER",
-      },
-      include: { playerProfile: true },
-    });
+  // Nouveau user → création en DB
+  const newUser = await prisma.user.create({
+    data: {
+      clerkId: clerkUser.id,
+      email: clerkUser.emailAddresses[0].emailAddress,
+      fullName:
+        `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim(),
+      role: "PLAYER",
+      onboarded: false,
+    },
+    include: { playerProfile: true },
+  });
 
-    console.log("✅ User créé en base :", user.email);
-  }
+  return newUser;
+}
 
-  return user;
+// Retourne le user DB actuel sans le créer.
+export async function getCurrentUser() {
+  const clerkUser = await currentUser();
+  if (!clerkUser) return null;
+
+  return prisma.user.findUnique({
+    where: { clerkId: clerkUser.id },
+    include: { playerProfile: true },
+  });
 }
 
 export async function requireAuth() {
-  const user = await getCurrentUser();
+  const user = await syncUser();
   if (!user) redirect("/sign-in");
   return user;
 }
@@ -44,7 +52,7 @@ export async function requireAuth() {
 export async function requireRole(role: Role) {
   const user = await requireAuth();
   if (user.role !== role && user.role !== "ADMIN") {
-    redirect("/");
+    redirect("/dashboard");
   }
   return user;
 }

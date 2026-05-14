@@ -1,14 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import CancelRequestButton from "@/components/join-requests/CancelRequestButton";
 
 export default async function MyRequestsPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
-
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } });
-  if (!user) redirect("/sign-in");
+  const user = await requireAuth();
 
   const requests = await prisma.joinRequest.findMany({
     where: { playerId: user.id },

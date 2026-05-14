@@ -1,9 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-
-import { auth } from "@clerk/nextjs/server";
-
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 import {
@@ -13,49 +11,24 @@ import {
   cancelJoinRequestSchema,
 } from "@/lib/validations/join-request";
 
-import type {
-  JoinRequestInput,
-} from "@/lib/validations/join-request";
-
+import type { JoinRequestInput } from "@/lib/validations/join-request";
 
 // =========================
 // CREATE JOIN REQUEST
 // =========================
 
-export async function createJoinRequest(
-  data: JoinRequestInput
-) {
+export async function createJoinRequest(data: JoinRequestInput) {
   try {
-    const { userId } =
-      await auth();
+    const user = await getCurrentUser();
 
-    if (!userId) {
+    if (!user) {
       return {
         success: false,
         error: "Non autorisé",
       };
     }
 
-    const validatedData =
-      joinRequestSchema.parse(
-        data
-      );
-
-    // user prisma
-    const user =
-      await prisma.user.findUnique({
-        where: {
-          clerkId: userId,
-        },
-      });
-
-    if (!user) {
-      return {
-        success: false,
-        error:
-          "Utilisateur introuvable",
-      };
-    }
+    const validatedData = joinRequestSchema.parse(data);
 
     // seul un joueur ou admin peut faire une demande
     if (user.role === "ORGANIZER") {
@@ -65,151 +38,129 @@ export async function createJoinRequest(
       };
     }
 
-    // vérifier équipe
-    const team =
-      await prisma.team.findUnique({
-        where: {
-          id: validatedData.teamId,
-        },
+    // vérifier équipe (avec tournoi pour entryFee)
+    const team = await prisma.team.findUnique({
+      where: {
+        id: validatedData.teamId,
+      },
 
-        include: {
-          _count: {
-            select: {
-              members: true,
-            },
+      include: {
+        tournament: true,
+        _count: {
+          select: {
+            members: true,
           },
         },
-      });
+      },
+    });
 
     if (!team) {
       return {
         success: false,
-        error:
-          "Équipe introuvable",
+        error: "Équipe introuvable",
       };
     }
 
     // équipe pleine
-    if (
-      team._count.members >=
-      team.maxCapacity
-    ) {
+    if (team._count.members >= team.maxCapacity) {
       return {
         success: false,
-        error:
-          "Équipe pleine",
+        error: "Équipe pleine",
       };
     }
 
     // vérifier demande existante
-    const existingRequest =
-      await prisma.joinRequest.findUnique(
-        {
-          where: {
-            playerId_teamId: {
-              playerId:
-                user.id,
+    const existingRequest = await prisma.joinRequest.findUnique({
+      where: {
+        playerId_teamId: {
+          playerId: user.id,
 
-              teamId:
-                validatedData.teamId,
-            },
-          },
-        }
-      );
+          teamId: validatedData.teamId,
+        },
+      },
+    });
 
     if (existingRequest) {
       return {
         success: false,
-        error:
-          "Demande déjà envoyée",
+        error: "Demande déjà envoyée",
       };
     }
 
     // création demande
-    const request =
-      await prisma.joinRequest.create({
-        data: {
-          playerId: user.id,
+    const requiresPayment = team.tournament.entryFee > 0;
 
-          teamId:
-            validatedData.teamId,
+    const request = await prisma.joinRequest.create({
+      data: {
+        playerId: user.id,
 
-          message:
-            validatedData.message,
-        },
-      });
+        teamId: validatedData.teamId,
+
+        message: validatedData.message,
+
+        paymentStatus: requiresPayment ? "PENDING" : "NOT_REQUIRED",
+      },
+    });
 
     revalidatePath("/teams");
 
-    revalidatePath(
-      "/my-requests"
-    );
+    revalidatePath("/my-requests");
 
     return {
       success: true,
       request,
+      requiresPayment,
     };
   } catch (error) {
     console.log(error);
 
     return {
       success: false,
-      error:
-        "Erreur création demande",
+      error: "Erreur création demande",
     };
   }
 }
-
 
 // =========================
 // ACCEPT REQUEST
 // =========================
 
-export async function acceptJoinRequest(
-  id: string
-) {
+export async function acceptJoinRequest(id: string) {
   try {
     acceptJoinRequestSchema.parse({
       id,
     });
 
-    const request =
-      await prisma.joinRequest.findUnique({
-        where: {
-          id,
-        },
+    const request = await prisma.joinRequest.findUnique({
+      where: {
+        id,
+      },
 
-        include: {
-          team: {
-            include: {
-              _count: {
-                select: {
-                  members: true,
-                },
+      include: {
+        team: {
+          include: {
+            _count: {
+              select: {
+                members: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!request) {
       return {
         success: false,
-        error:
-          "Demande introuvable",
+        error: "Demande introuvable",
       };
     }
 
     // équipe pleine
-    if (
-      request.team._count
-        .members >=
-      request.team.maxCapacity
-    ) {
+    if (request.team._count.members >= request.team.maxCapacity) {
       return {
         success: false,
-        error:
-          "Équipe pleine",
+        error: "Équipe pleine",
       };
     }
 
@@ -235,19 +186,14 @@ export async function acceptJoinRequest(
         },
 
         data: {
-          status:
-            "ACCEPTED",
+          status: "ACCEPTED",
         },
       }),
     ]);
 
-    revalidatePath(
-      "/requests"
-    );
+    revalidatePath("/requests");
 
-    revalidatePath(
-      "/teams"
-    );
+    revalidatePath("/teams");
 
     return {
       success: true,
@@ -257,20 +203,16 @@ export async function acceptJoinRequest(
 
     return {
       success: false,
-      error:
-        "Erreur acceptation",
+      error: "Erreur acceptation",
     };
   }
 }
-
 
 // =========================
 // REJECT REQUEST
 // =========================
 
-export async function rejectJoinRequest(
-  id: string
-) {
+export async function rejectJoinRequest(id: string) {
   try {
     rejectJoinRequestSchema.parse({
       id,
@@ -282,14 +224,11 @@ export async function rejectJoinRequest(
       },
 
       data: {
-        status:
-          "REJECTED",
+        status: "REJECTED",
       },
     });
 
-    revalidatePath(
-      "/requests"
-    );
+    revalidatePath("/requests");
 
     return {
       success: true,
@@ -299,20 +238,16 @@ export async function rejectJoinRequest(
 
     return {
       success: false,
-      error:
-        "Erreur refus demande",
+      error: "Erreur refus demande",
     };
   }
 }
-
 
 // =========================
 // CANCEL REQUEST
 // =========================
 
-export async function cancelJoinRequest(
-  id: string
-) {
+export async function cancelJoinRequest(id: string) {
   try {
     cancelJoinRequestSchema.parse({
       id,
@@ -324,9 +259,7 @@ export async function cancelJoinRequest(
       },
     });
 
-    revalidatePath(
-      "/my-requests"
-    );
+    revalidatePath("/my-requests");
 
     return {
       success: true,
@@ -336,8 +269,7 @@ export async function cancelJoinRequest(
 
     return {
       success: false,
-      error:
-        "Erreur annulation",
+      error: "Erreur annulation",
     };
   }
 }

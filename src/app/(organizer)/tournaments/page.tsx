@@ -1,29 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
-
 import prisma from "@/lib/prisma";
 
 export default async function TournamentsPage() {
-  await requireRole("ORGANIZER");
-
-  // Clerk user
-  const { userId } = await auth();
-
-  if (!userId) {
-    return <div className="p-6">Non autorisé</div>;
-  }
-
-  // User Prisma
-  const user = await prisma.user.findUnique({
-    where: {
-      clerkId: userId,
-    },
-  });
-
-  if (!user) {
-    return <div className="p-6">Utilisateur introuvable</div>;
-  }
+  const user = await requireRole("ORGANIZER");
 
   const tournaments = await prisma.tournament.findMany({
     where: {
