@@ -51,21 +51,43 @@ export async function createTournament(data: TournamentInput) {
 // UPDATE TOURNAMENT
 // =========================
 
-export async function updateTournament(id: string, data: TournamentInput) {
+export async function updateTournament(
+  id: string,
+  data: TournamentInput
+) {
   try {
-    const validatedData = updateTournamentSchema.parse(data);
+    const validatedData =
+      updateTournamentSchema.parse(
+        data
+      );
 
-    const tournament = await prisma.tournament.update({
-      where: {
-        id,
-      },
+    const tournament =
+      await prisma.tournament.update({
+        where: {
+          id,
+        },
 
-      data: {
-        ...validatedData,
+        data: {
+          name:
+            validatedData.name,
 
-        startDate: new Date(validatedData.startDate),
-      },
-    });
+          sport:
+            validatedData.sport,
+
+          city:
+            validatedData.city,
+
+          startDate: new Date(
+            validatedData.startDate
+          ),
+
+          entryFee:
+            validatedData.entryFee,
+
+          currency:
+            validatedData.currency,
+        },
+      });
 
     return {
       success: true,
@@ -76,11 +98,11 @@ export async function updateTournament(id: string, data: TournamentInput) {
 
     return {
       success: false,
-      error: "Erreur modification tournoi",
+      error:
+        "Erreur modification tournoi",
     };
   }
 }
-
 // =========================
 // DELETE TOURNAMENT
 // =========================

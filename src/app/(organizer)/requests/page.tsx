@@ -2,8 +2,12 @@ import { requireAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import AcceptRejectButtons from "@/components/join-requests/AcceptRejectButtons";
 
-export default async function OrganizerRequestsPage() {
+export default async function OrganizerRequestsPage(props: {
+  searchParams: Promise<{ teamId?: string }>;
+}) {
   const user = await requireAuth();
+  const searchParams = await props.searchParams;
+  const teamId = searchParams.teamId;
 
   // get all pending requests for teams in tournaments owned by this organizer
   const teams =
