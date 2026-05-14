@@ -5,6 +5,7 @@
 
 // Importer le singleton Stripe pour verifier la session de paiement
 import { stripe } from "@/lib/stripe";
+import prisma from "@/lib/prisma";
 // redirect : fonction Next.js pour rediriger si la session est invalide
 import { redirect } from "next/navigation";
 // Link : composant Next.js pour la navigation interne (prechargement automatique)
@@ -49,6 +50,15 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   // Un utilisateur malveillant pourrait forger une URL avec un faux session_id
   if (session.payment_status !== "paid") {
     redirect("/my-requests");
+  }
+
+  // Mettre à jour le statut de paiement en DB (fallback sans webhook)
+  const joinRequestId = session.metadata?.joinRequestId;
+  if (joinRequestId) {
+    await prisma.joinRequest.updateMany({
+      where: { id: joinRequestId, paymentStatus: { not: "PAID" } },
+      data: { paymentStatus: "PAID", paidAt: new Date() },
+    });
   }
 
   // Convertir le montant total de cents vers dollars (Stripe stocke en cents)

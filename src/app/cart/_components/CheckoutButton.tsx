@@ -34,7 +34,8 @@ export function CheckoutButton({
       try {
         // Appeler la Server Action avec l'identifiant du panier
         // Si tout va bien, l'utilisateur est redirige vers Stripe
-        await createCheckoutSession({ joinRequestId });
+        const { url } = await createCheckoutSession({ joinRequestId });
+        window.location.href = url;
       } catch (error) {
         // En cas d'erreur, on l'affiche dans la console pour le debogage
         console.error(error);

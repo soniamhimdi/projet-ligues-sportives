@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import CancelRequestButton from "@/components/join-requests/CancelRequestButton";
+import { CheckoutButton } from "@/app/cart/_components/CheckoutButton";
 
 export default async function MyRequestsPage() {
   const user = await requireAuth();
@@ -63,6 +64,21 @@ export default async function MyRequestsPage() {
 
               {req.status === "PENDING" && (
                 <CancelRequestButton requestId={req.id} />
+              )}
+
+              {req.paymentStatus === "PENDING" && (
+                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 font-medium mb-2">
+                    ⚠️ Paiement requis pour finaliser votre inscription
+                  </p>
+                  <CheckoutButton joinRequestId={req.id} />
+                </div>
+              )}
+
+              {req.paymentStatus === "PAID" && (
+                <p className="text-sm text-green-700 font-medium">
+                  ✅ Paiement confirmé
+                </p>
               )}
             </div>
           ))}

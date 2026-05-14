@@ -68,7 +68,7 @@ export default function Header({ role }: { role?: string | null }) {
                 Connexion
               </button>
             </SignInButton>
-            <SignUpButton>
+            <SignUpButton forceRedirectUrl="/dashboard">
               <button className="text-sm font-medium bg-purple-700 text-white rounded-full px-4 py-1.5 hover:bg-purple-800 transition-colors">
                 Inscription
               </button>
@@ -88,7 +88,6 @@ export default function Header({ role }: { role?: string | null }) {
 
             {/* Avatar + menu Clerk */}
             <UserButton
-              afterSignOutUrl="/"
               appearance={{
                 elements: {
                   avatarBox: "w-9 h-9",

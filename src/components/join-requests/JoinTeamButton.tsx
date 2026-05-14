@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createJoinRequest } from "@/server/actions/join-requests";
+import { createCheckoutSession } from "@/server/actions/checkout";
 
 export default function JoinTeamButton({ teamId }: { teamId: string }) {
   const router = useRouter();
@@ -13,13 +14,24 @@ export default function JoinTeamButton({ teamId }: { teamId: string }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const result = await createJoinRequest({ teamId, message: message || undefined });
+    const result = await createJoinRequest({
+      teamId,
+      message: message || undefined,
+    });
     setLoading(false);
     if (result.success) {
-      alert("Demande envoyée !");
-      setOpen(false);
-      setMessage("");
-      router.refresh();
+      if (result.requiresPayment && result.request) {
+        // Tournoi payant → redirection immédiate vers Stripe
+        const { url } = await createCheckoutSession({
+          joinRequestId: result.request.id,
+        });
+        window.location.href = url;
+      } else {
+        alert("Demande envoyée !");
+        setOpen(false);
+        setMessage("");
+        router.refresh();
+      }
     } else {
       alert(result.error);
     }

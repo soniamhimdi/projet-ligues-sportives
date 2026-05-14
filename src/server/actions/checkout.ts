@@ -1,22 +1,21 @@
-'use server';
+"use server";
 
-import { redirect } from 'next/navigation';
-import { stripe } from '@/lib/stripe';
-import prisma from '@/lib/prisma';
-import { z } from 'zod';
-import { getCurrentUser } from '@/lib/auth';
+import { stripe } from "@/lib/stripe";
+import prisma from "@/lib/prisma";
+import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth";
 
 const createCheckoutSessionSchema = z.object({
-  joinRequestId: z.string().cuid('joinRequestId invalide'),
+  joinRequestId: z.string().cuid("joinRequestId invalide"),
 });
 
 type CreateCheckoutSessionInput = z.infer<typeof createCheckoutSessionSchema>;
 
 export async function createCheckoutSession(
-  input: CreateCheckoutSessionInput
-): Promise<void> {
+  input: CreateCheckoutSessionInput,
+): Promise<{ url: string }> {
   const user = await getCurrentUser();
-  if (!user) throw new Error('Non autorisé');
+  if (!user) throw new Error("Non autorisé");
 
   const parsed = createCheckoutSessionSchema.safeParse(input);
   if (!parsed.success) {
@@ -37,26 +36,26 @@ export async function createCheckoutSession(
     },
   });
 
-  if (!joinRequest) throw new Error('Demande introuvable');
+  if (!joinRequest) throw new Error("Demande introuvable");
 
   // Sécurité : seul le joueur concerné peut payer
-  if (joinRequest.playerId !== user.id) throw new Error('Accès refusé');
+  if (joinRequest.playerId !== user.id) throw new Error("Accès refusé");
 
-  if (joinRequest.paymentStatus === 'PAID') {
-    throw new Error('Cette demande est déjà payée');
+  if (joinRequest.paymentStatus === "PAID") {
+    throw new Error("Cette demande est déjà payée");
   }
 
   const { tournament } = joinRequest.team;
 
   if (tournament.entryFee <= 0) {
-    throw new Error('Ce tournoi est gratuit, aucun paiement requis');
+    throw new Error("Ce tournoi est gratuit, aucun paiement requis");
   }
 
   const appUrl = process.env.APP_URL;
-  if (!appUrl) throw new Error('APP_URL est manquante dans .env.local');
+  if (!appUrl) throw new Error("APP_URL est manquante dans .env.local");
 
   const checkoutSession = await stripe.checkout.sessions.create({
-    mode: 'payment',
+    mode: "payment",
     line_items: [
       {
         price_data: {
@@ -76,7 +75,7 @@ export async function createCheckoutSession(
       joinRequestId: joinRequest.id,
       userId: user.id,
     },
-    locale: 'fr',
+    locale: "fr",
   });
 
   if (!checkoutSession.url) {
@@ -89,5 +88,5 @@ export async function createCheckoutSession(
     data: { stripeSessionId: checkoutSession.id },
   });
 
-  redirect(checkoutSession.url);
+  return { url: checkoutSession.url };
 }
